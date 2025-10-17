@@ -1,8 +1,3 @@
-Here’s your rewritten and polished **GitHub-ready README** — concise, clear, and professional while keeping all technical details intact.
-
----
-
-````markdown
 # Azure Virtual Network (VNet) Encryption
 
 ## Overview
