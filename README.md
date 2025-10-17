@@ -1,21 +1,26 @@
+Here’s your rewritten and polished **GitHub-ready README** — concise, clear, and professional while keeping all technical details intact.
+
+---
+
+````markdown
 # Azure Virtual Network (VNet) Encryption
 
 ## Overview
 
-**Azure Virtual Network (VNet) Encryption** provides seamless encryption and decryption of traffic between supported Azure Virtual Machines within the same Virtual Network (VNet) or across peered VNets. It enhances data security by ensuring that communication between VMs is encrypted at the network layer, protecting against unauthorized access and packet sniffing.
+**Azure Virtual Network (VNet) Encryption** provides seamless encryption and decryption of traffic between supported Azure Virtual Machines within the same Virtual Network (VNet) or across peered VNets. It secures east–west traffic at the network layer, protecting data-in-transit from unauthorized access and packet sniffing.
 
-This feature uses **MACsec (Media Access Control Security)** on the underlying physical links to secure data-in-transit between virtual machines, ensuring confidentiality and integrity without requiring application-level changes.
+This capability leverages **MACsec (Media Access Control Security)** on the underlying physical network to encrypt traffic transparently, maintaining confidentiality and integrity without requiring any application-level changes.
 
 ---
 
-## Step-by-Step Guide
+## Step-by-Step Deployment Guide
 
-### 1. Create the Virtual Network
+### 1. Create the Virtual Network and Subnets
 
-Create a **Virtual Network** with **three subnets**:
+Create a **Virtual Network** with three subnets:
 - **AppGWSubnet** – for the Application Gateway  
 - **ClientSubnet** – for the client VM  
-- **ServerSubnet** – for the server VM (which will act as the backend for the Application Gateway)
+- **ServerSubnet** – for the server VM (backend for the Application Gateway)
 
 ```bash
 az network vnet create \
@@ -24,9 +29,10 @@ az network vnet create \
   --address-prefix 10.0.0.0/16 \
   --subnet-name AppGWSubnet \
   --subnet-prefix 10.0.1.0/24
-```
+````
 
 Add the remaining two subnets:
+
 ```bash
 az network vnet subnet create \
   --resource-group MyRG \
@@ -45,7 +51,8 @@ az network vnet subnet create \
 
 ### 2. Enable VNet Encryption
 
-Enable encryption at the VNet level:
+Enable encryption for the VNet:
+
 ```bash
 az network vnet update \
   --name TestVNet \
@@ -53,7 +60,8 @@ az network vnet update \
   --enable-encryption true
 ```
 
-Verify the encryption status:
+Verify:
+
 ```bash
 az network vnet show \
   --name TestVNet \
@@ -65,9 +73,10 @@ az network vnet show \
 
 ### 3. Deploy Virtual Machines
 
-Deploy **DV5-series or later VMs** into each subnet.
+Deploy **DV5-series or later VMs** in each subnet.
 
 **Client VM:**
+
 ```bash
 az vm create \
   --name ClientVM \
@@ -78,7 +87,8 @@ az vm create \
   --subnet ClientSubnet
 ```
 
-**Server VM (AppGW backend):**
+**Server VM (backend):**
+
 ```bash
 az vm create \
   --name ServerVM \
@@ -89,7 +99,8 @@ az vm create \
   --subnet ServerSubnet
 ```
 
-Ensure **Accelerated Networking** is enabled:
+Check and enable **Accelerated Networking**:
+
 ```bash
 az network nic show \
   --name ClientVMNic \
@@ -97,7 +108,8 @@ az network nic show \
   --query "enableAcceleratedNetworking"
 ```
 
-If it’s disabled:
+If disabled:
+
 ```bash
 az network nic update \
   --name ClientVMNic \
@@ -106,13 +118,15 @@ az network nic update \
 az vm restart --name ClientVM --resource-group MyRG
 ```
 
-Repeat the same for **ServerVMNic**.
+Repeat for **ServerVMNic**.
+
+> **Note:** Stop/start the VM to ensure Accelerated Networking is applied properly.
 
 ---
 
-### 4. Deploy Application Gateway
+### 4. Deploy the Application Gateway
 
-Deploy an **Application Gateway** in the AppGW subnet and configure **ServerVM** as its backend target.
+Deploy an **Application Gateway** in the AppGW subnet and configure **ServerVM** as the backend.
 
 ```bash
 az network application-gateway create \
@@ -127,20 +141,96 @@ az network application-gateway create \
   --routing-rule-type Basic \
   --servers <ServerVMPrivateIP>
 ```
-**Note** - Stop/ Start is needed for proper registration of acclerated networking
+
 ---
 
-### 5. Verify Communication and Encryption
+## 🧩 Verify Encrypted Traffic Using Network Watcher Flow Logs
 
-From **ClientVM**, test communication through **AppGW**:
+### 1. Enable Network Watcher
+
+1. In the **Azure Portal**, search for **Network Watcher**.
+2. Select the **region** where your VNet resides.
+3. If not enabled, click **Enable Network Watcher**.
+
+---
+
+### 2. Create a Flow Log
+
+1. Go to **Network Watcher → Flow Logs** → click **+ Create**.
+2. Configure as follows:
+
+| Setting                 | Recommended Value            | Description                      |
+| ----------------------- | ---------------------------- | -------------------------------- |
+| **Subscription**        | Your active subscription     | Must match the VNet region       |
+| **Resource Group**      | Same as your VNet            | Keeps related resources together |
+| **NSG**                 | Attached to the ServerSubnet | Captures VM-to-VM flows          |
+| **Flow log version**    | v2                           | Provides detailed flow data      |
+| **Storage account**     | e.g., `vnetencryptionlogs`   | Stores `.json` flow logs         |
+| **Retention (days)**    | 7–30                         | Choose per your test duration    |
+| **Traffic analytics**   | ✅ Enabled                    | Enables visual insights          |
+| **Processing interval** | 10 minutes                   | Near real-time updates           |
+
+Click **Review + Create** → **Create**.
+
+---
+
+### 3. Generate Test Traffic
+
+From the **Client VM**, send traffic through the Application Gateway:
+
 ```bash
 curl -v http://<AppGWFrontendIP>
 ```
 
-Then, verify VNet encryption logs using **Network Watcher → Flow Logs**, confirming traffic between the subnets is encrypted.
+Wait 10–15 minutes for logs to appear.
 
 ---
 
-## Summary
+### 4. View and Verify Flow Logs
 
-Azure VNet Encryption ensures **secure, low-latency, in-transit encryption** for VM traffic within VNets or peered VNets. It’s transparent to applications, simple to enable, and integrates seamlessly with **Network Watcher** for verification.
+In your **Storage Account**, navigate to:
+
+```
+insights-logs-networksecuritygroupflowevent/
+  resourceId=/SUBSCRIPTIONS/<subId>/RESOURCEGROUPS/<rg>/PROVIDERS/MICROSOFT.NETWORK/NETWORKSECURITYGROUPS/<nsgName>/
+  year=<YYYY>/month=<MM>/day=<DD>/hour=<HH>/
+```
+
+Download a `.json` log and inspect it:
+
+```json
+{
+  "records": [
+    {
+      "time": "2025-10-17T20:10:00Z",
+      "flowTuples": [
+        "10.0.2.4,10.0.3.5,443,52000,T,I,A,0,0,0,0"
+      ],
+      "vnetEncryptionEnabled": true
+    }
+  ]
+}
+```
+
+---
+
+### 5. Analyze with Traffic Analytics
+
+1. In **Network Watcher → Traffic Analytics**, open your workspace.
+2. Review dashboards for:
+
+   * **Top Talkers** (VMs/Subnets)
+   * **Encrypted Flows**
+   * **Inbound/Outbound Traffic**
+   * **Allowed vs. Denied Flows**
+
+---
+
+## ✅ Summary
+
+By enabling **VNet Encryption** and configuring **Flow Logs with Traffic Analytics**, you can confirm that communication between **Client**, **AppGW**, and **Server** subnets is securely encrypted in transit.
+
+Logs with `"vnetEncryptionEnabled": true` validate encryption status, while **Traffic Analytics** visualizes flow patterns and encrypted paths across your VNet.
+
+---
+
