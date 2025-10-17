@@ -127,7 +127,7 @@ az network application-gateway create \
   --routing-rule-type Basic \
   --servers <ServerVMPrivateIP>
 ```
-
+**Note** - Stop/ Start is needed for proper registration of acclerated networking
 ---
 
 ### 5. Verify Communication and Encryption
