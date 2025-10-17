@@ -225,7 +225,7 @@ Download a `.json` log and inspect it:
 
 By enabling **VNet Encryption** and configuring **Flow Logs with Traffic Analytics**, you can confirm that communication between **Client**, **AppGW**, and **Server** subnets is securely encrypted in transit.
 
-Logs with `"vnetEncryptionEnabled": true` validate encryption status, while **Traffic Analytics** visualizes flow patterns and encrypted paths across your VNet.
+
 
 ---
 
