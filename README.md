@@ -53,6 +53,7 @@ az network vnet update \
   --name TestVNet \
   --resource-group MyRG \
   --enable-encryption true
+  --encryption-enforcement-policy AllowUnencrypted
 ```
 
 Verify:
@@ -80,6 +81,7 @@ az vm create \
   --size Standard_D2s_v5 \
   --vnet-name TestVNet \
   --subnet ClientSubnet
+  --generate-ssh-keys 
 ```
 
 **Server VM (backend):**
@@ -92,6 +94,7 @@ az vm create \
   --size Standard_D2s_v5 \
   --vnet-name TestVNet \
   --subnet ServerSubnet
+  --generate-ssh-keys 
 ```
 
 Check and enable **Accelerated Networking**:
