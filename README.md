@@ -93,8 +93,7 @@ az vm create \
   --image Ubuntu2204 \
   --size Standard_D2s_v5 \
   --vnet-name TestVNet \
-  --subnet ServerSubnet
-  --generate-ssh-keys 
+  --subnet ServerSubnet 
 ```
 
 Check and enable **Accelerated Networking**:
